@@ -6,11 +6,11 @@ from evosax import NetworkMapper
 import gymnax
 
 
-def get_model_ready(rng, config, speed=False):
+def get_model_ready(rng, env, env_params, config, speed=False):
     """Instantiate a model according to obs shape of environment."""
     # Get number of desired output units
-    env, env_params = gymnax.make(config.env_name, **config.env_kwargs)
-
+    #env, env_params = gymnax.make(config.env_name, **config.env_kwargs)
+    #env_params = env.default_params
     # Instantiate model class (flax-based)
     if config.train_type == "ES":
         model = NetworkMapper[config.network_name](
@@ -38,8 +38,10 @@ def get_model_ready(rng, config, speed=False):
             num_output_units=env.num_actions,
         )
 
-    # Initialize the network based on the observation shape
-    obs_shape = env.observation_space(env_params).shape
+    # Initialize the network based on the observation shape (per agent)
+    obs_shape = env.observation_space(config.num_agents, env_params).shape[1] 
+    #print("** obs shape **", obs_shape[1])
+    #raise Exception()
     if config.network_name != "LSTM" or speed:
         params = model.init(rng, jnp.zeros(obs_shape), rng=rng)
     else:
