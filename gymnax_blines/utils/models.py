@@ -5,6 +5,7 @@ from tensorflow_probability.substrates import jax as tfp
 from evosax import NetworkMapper
 import gymnax
 
+from jax_multirobsim.policies import LongPolicy
 
 def get_model_ready(rng, env, env_params, config, speed=False):
     """Instantiate a model according to obs shape of environment."""
@@ -25,6 +26,8 @@ def get_model_ready(rng, env, env_params, config, speed=False):
             model = GaussianSeparateMLP(
                 **config.network_config, num_output_units=env.num_actions
             )
+    elif config.train_type == "Long":
+        model = LongPolicy()
 
     # Only use feedforward MLP in speed evaluations!
     if speed and config.network_name == "LSTM":
@@ -42,7 +45,9 @@ def get_model_ready(rng, env, env_params, config, speed=False):
     obs_shape = env.observation_space(config.num_agents, env_params).shape[1] 
     #print("** obs shape **", obs_shape[1])
     #raise Exception()
-    if config.network_name != "LSTM" or speed:
+    if config.train_type == "Long":
+        params = model.init(rng, jnp.zeros((3, params.sparams.num_beams)), jnp.zeros((2,)), jnp.zeros((2,)))
+    elif config.network_name != "LSTM" or speed:
         params = model.init(rng, jnp.zeros(obs_shape), rng=rng)
     else:
         params = model.init(
