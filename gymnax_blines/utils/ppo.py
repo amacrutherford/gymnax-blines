@@ -399,7 +399,8 @@ def update(
     avg_metrics_dict = defaultdict(int)
 
     for _ in range(epoch_ppo):
-        idxes = jax.random.permutation(rng, idxes)
+        rng, key = jax.random.split(rng, 2)
+        idxes = jax.random.permutation(key, idxes)
         idxes_list = [
             idxes[start : start + size_minibatch]
             for start in jnp.arange(0, size_batch, size_minibatch)

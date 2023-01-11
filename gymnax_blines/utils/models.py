@@ -27,7 +27,7 @@ def get_model_ready(rng, env, env_params, config, speed=False):
                 **config.network_config, num_output_units=env.num_actions
             )
     elif config.train_type == "Long":
-        model = LongPolicy()
+        model = LongPolicy(num_lidar_beams=env_params.sparams.num_beams)
 
     # Only use feedforward MLP in speed evaluations!
     if speed and config.network_name == "LSTM":
@@ -46,7 +46,7 @@ def get_model_ready(rng, env, env_params, config, speed=False):
     #print("** obs shape **", obs_shape[1])
     #raise Exception()
     if config.train_type == "Long":
-        params = model.init(rng, jnp.zeros((3, params.sparams.num_beams)), jnp.zeros((2,)), jnp.zeros((2,)))
+        params = model.init(rng, jnp.zeros((1, env_params.sparams.num_beams*3 + 4)), rng)
     elif config.network_name != "LSTM" or speed:
         params = model.init(rng, jnp.zeros(obs_shape), rng=rng)
     else:
