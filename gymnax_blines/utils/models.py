@@ -43,7 +43,7 @@ def get_model_ready(rng, env, env_params, config, speed=False):
 
     # Initialize the network based on the observation shape (per agent)
     obs_shape = env.observation_space(config.num_agents, env_params).shape[1] 
-    #print("** obs shape **", obs_shape[1])
+    #print("** obs shape **", obs_shape)
     #raise Exception()
     if config.train_type == "Long":
         params = model.init(rng, jnp.zeros((1, env_params.sparams.num_beams*3 + 4)), rng)
