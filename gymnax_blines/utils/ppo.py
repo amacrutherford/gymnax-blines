@@ -346,7 +346,7 @@ def loss_actor_and_critic(
     # And why with 0 breaks gaussian model pi
     log_prob = pi.log_prob(action[..., -1])
     
-    done = (1-done)  # create mask
+    done = 1 # (1-done)  # create mask
 
     value_pred_clipped = value_old + (value_pred - value_old).clip(
         -clip_eps, clip_eps
