@@ -328,7 +328,7 @@ def loss_actor_and_critic(
     params_model: flax.core.frozen_dict.FrozenDict,
     apply_fn: Callable[..., Any],
     obs: jnp.ndarray,
-    done: jnp.ndarray,
+    term: jnp.ndarray,
     target: jnp.ndarray,
     value_old: jnp.ndarray,
     log_pi_old: jnp.ndarray,
@@ -339,20 +339,24 @@ def loss_actor_and_critic(
     entropy_coeff: float,
 ) -> jnp.ndarray:
 
+    # Have added mask for states where agents did not act
+    term = (1-term)
+    
     value_pred, pi = apply_fn(params_model, obs, rng=None)
-    value_pred = value_pred[:, 0]
+    value_pred = value_pred[:, 0] * term
+    target = target * term
+    gae = gae * term
+    value_old = value_old * term
 
     # TODO: Figure out why training without 0 breaks categorical model
     # And why with 0 breaks gaussian model pi
     log_prob = pi.log_prob(action[..., -1])
     
-    done = 1 # (1-done)  # create mask
-
     value_pred_clipped = value_old + (value_pred - value_old).clip(
         -clip_eps, clip_eps
     )
-    value_losses = jnp.square(value_pred - target) * done
-    value_losses_clipped = jnp.square(value_pred_clipped - target) * done
+    value_losses = jnp.square(value_pred - target) * term
+    value_losses_clipped = jnp.square(value_pred_clipped - target) * term
     value_loss = 0.5 * jnp.maximum(value_losses, value_losses_clipped).mean()
 
     ratio = jnp.exp(log_prob - log_pi_old)
@@ -360,10 +364,10 @@ def loss_actor_and_critic(
     gae = (gae - gae_mean) / (gae.std() + 1e-8)
     loss_actor1 = ratio * gae 
     loss_actor2 = jnp.clip(ratio, 1.0 - clip_eps, 1.0 + clip_eps) * gae
-    loss_actor = -jnp.minimum(loss_actor1, loss_actor2) * done
+    loss_actor = -jnp.minimum(loss_actor1, loss_actor2) * term
     loss_actor = loss_actor.mean()
 
-    entropy = (pi.entropy() * done).mean()
+    entropy = (pi.entropy() * term).mean()
 
     total_loss = (
         loss_actor + critic_coeff * value_loss - entropy_coeff * entropy
@@ -392,7 +396,7 @@ def update(
     rng: jax.random.PRNGKey,
 ):
     """Perform multiple epochs of updates with multiple updates."""
-    obs, action, done, log_pi_old, value, target, gae = batch
+    obs, action, done, term, log_pi_old, value, target, gae = batch
     size_batch = num_envs * n_steps
     size_minibatch = size_batch // n_minibatch    
     idxes = jnp.arange(num_envs * n_steps)
@@ -410,8 +414,8 @@ def update(
             train_state,
             idxes_list,
             flatten_dims(obs),
+            flatten_dims(term),
             flatten_dims(action),
-            flatten_dims(done),
             flatten_dims(log_pi_old),
             flatten_dims(value),
             jnp.array(flatten_dims(target)),
@@ -449,8 +453,8 @@ def update_epoch(
     train_state: TrainState,
     idxes: jnp.ndarray,
     obs,
+    term,
     action,
-    done,
     log_pi_old,
     value,
     target,
@@ -466,7 +470,7 @@ def update_epoch(
             train_state.params,
             train_state.apply_fn,
             obs=obs[idx],
-            done=done[idx],
+            term=term[idx],
             target=target[idx],
             value_old=value[idx],
             log_pi_old=log_pi_old[idx],

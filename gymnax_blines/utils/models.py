@@ -6,7 +6,7 @@ from evosax import NetworkMapper
 import gymnax
 
 from jax_multirobsim.policies import LongPolicy
-
+from jax_multirobsim.env.policies.SAC.jax_net import SACPolicy
 def get_model_ready(rng, env, env_params, config, speed=False):
     """Instantiate a model according to obs shape of environment."""
     # Get number of desired output units
@@ -27,7 +27,10 @@ def get_model_ready(rng, env, env_params, config, speed=False):
                 **config.network_config, num_output_units=env.num_actions
             )
     elif config.train_type == "Long":
-        model = LongPolicy(num_lidar_beams=env_params.sparams.num_beams)
+        if config.network_name == "Gaussian-SAC":
+            model = SACPolicy(num_lidar_beams=env_params.sparams.num_beams)
+        else:
+            model = LongPolicy(num_lidar_beams=env_params.sparams.num_beams)
 
     # Only use feedforward MLP in speed evaluations!
     if speed and config.network_name == "LSTM":
