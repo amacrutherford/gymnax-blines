@@ -6,7 +6,6 @@ from evosax import NetworkMapper
 import gymnax
 
 from jax_multirobsim.policies import LongPolicy
-from jax_multirobsim.env.policies.SAC.jax_net import SACPolicy
 def get_model_ready(rng, env, env_params, config, speed=False):
     """Instantiate a model according to obs shape of environment."""
     # Get number of desired output units
@@ -26,11 +25,8 @@ def get_model_ready(rng, env, env_params, config, speed=False):
             model = GaussianSeparateMLP(
                 **config.network_config, num_output_units=env.num_actions
             )
-    elif config.train_type == "Long":
-        if config.network_name == "Gaussian-SAC":
-            model = SACPolicy(num_lidar_beams=env_params.sparams.num_beams)
-        else:
-            model = LongPolicy(num_lidar_beams=env_params.sparams.num_beams)
+    elif config.train_type == "Long" or config.train_type == "PLR":
+        model = LongPolicy(num_lidar_beams=env_params.sparams.num_beams)
 
     # Only use feedforward MLP in speed evaluations!
     if speed and config.network_name == "LSTM":
@@ -48,7 +44,7 @@ def get_model_ready(rng, env, env_params, config, speed=False):
     obs_shape = env.observation_space(config.num_agents, env_params).shape[1] 
     #print("** obs shape **", obs_shape)
     #raise Exception()
-    if config.train_type == "Long":
+    if config.train_type == "Long" or config.train_type == "PLR":
         params = model.init(rng, jnp.zeros((1, env_params.sparams.num_beams*3 + 4)), rng)
     elif config.network_name != "LSTM" or speed:
         params = model.init(rng, jnp.zeros(obs_shape), rng=rng)

@@ -1,4 +1,4 @@
-def load_config(config_fname, seed_id=0, lrate=None):
+def load_config(config_fname, seed_id=None, lrate=None):
     """Load training configuration and random seed of experiment."""
     import yaml
     import re
@@ -26,7 +26,8 @@ def load_config(config_fname, seed_id=0, lrate=None):
         return yaml_config
 
     config = load_yaml(config_fname)
-    config["train_config"]["seed_id"] = seed_id
+    if seed_id is not None:
+        config["train_config"]["seed_id"] = seed_id
     if lrate is not None:
         if "lr_begin" in config["train_config"].keys():
             config["train_config"]["lr_begin"] = lrate
